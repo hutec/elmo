@@ -70,4 +70,7 @@ plotDistances model =
         , g [ transform [ Translate padding padding ], class [ "series" ] ]
             [ Path.element (line model) [ stroke <| Paint <| Color.rgb 1 0 0, strokeWidth 3, fill PaintNone ]
             ]
+        , g [ transform [ Translate (w / 2) (padding + 20) ] ]
+        [ text_ [ fontFamily [ "sans-serif" ], fontSize 20, textAnchor AnchorMiddle ] [ text "Route Distance" ]
+        ]
         ]
