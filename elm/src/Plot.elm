@@ -6,11 +6,12 @@ import Path exposing (Path)
 import Scale exposing (ContinuousScale)
 import Shape
 import Time
-import TypedSvg exposing (g, svg)
-import TypedSvg.Attributes exposing (class, fill, stroke, transform, viewBox)
-import TypedSvg.Attributes.InPx exposing (strokeWidth)
-import TypedSvg.Core exposing (Svg)
-import TypedSvg.Types exposing (Paint(..), Transform(..))
+import TypedSvg exposing (g, svg, text_)
+import TypedSvg.Attributes exposing (class, fill, stroke, transform, viewBox, fontFamily, textAnchor)
+import TypedSvg.Attributes.InPx exposing (strokeWidth, fontSize)
+import TypedSvg.Core exposing (Svg, text)
+import TypedSvg.Types exposing (Paint(..), Transform(..), AnchorAlignment(..))
+import Statistics
 
 
 w : Float
@@ -28,40 +29,56 @@ padding =
     30
 
 
-xScale : ContinuousScale Time.Posix
-xScale =
-    Scale.time Time.utc ( 0, w - 2 * padding ) (Time.millisToPosix 1577833200000, Time.millisToPosix 1586642400000)
+defaultOrPosix : Maybe (Int, Int) -> (Time.Posix, Time.Posix)
+defaultOrPosix a = 
+    case a of
+        Nothing ->
+            (Time.millisToPosix 1577833200000, Time.millisToPosix 1586642400000)
 
-
-
-yScale : ContinuousScale Float
-yScale =
-    Scale.linear ( h - 2 * padding, 0 ) ( 0.0, 200.0)
-
-
-xAxis : Svg msg
-xAxis =
-    Axis.bottom [ Axis.tickCount 10 ] xScale
-
-
-yAxis : Svg msg
-yAxis =
-    Axis.left [ Axis.tickCount 5 ] yScale
-
-
-transformToLineData : ( Time.Posix, Float ) -> Maybe ( Float, Float )
-transformToLineData ( x, y ) =
-    Just ( Scale.convert xScale x, Scale.convert yScale y )
-
-
-line : List ( Time.Posix, Float ) -> Path
-line model =
-    List.map transformToLineData model
-        |> Shape.line Shape.linearCurve
+        Just (x , y) ->
+            (Time.millisToPosix x, Time.millisToPosix y)
 
 
 plotDistances : List ( Time.Posix, Float ) -> Svg msg
 plotDistances model =
+    let
+        xScale : ContinuousScale Time.Posix
+        xScale =
+            model
+                |> List.map (Tuple.first >> Time.posixToMillis)
+                |> Statistics.extent
+                |> defaultOrPosix
+                |> Scale.time Time.utc ( 0, w - 2 * padding )
+
+        xAxis : Svg msg
+        xAxis =
+            Axis.bottom [ Axis.tickCount 10 ] xScale
+
+        yScale : ContinuousScale Float
+        yScale = 
+            model
+                |> List.map Tuple.second
+                |> List.maximum >> Maybe.withDefault 0
+                |> (\b -> (0, b))
+                |> Scale.linear (h - 2 * padding, 0)
+
+        yAxis : Svg msg
+        yAxis =
+            Axis.left [ Axis.tickCount 5 ] yScale
+
+
+        transformToLineData : ( Time.Posix, Float ) -> Maybe ( Float, Float )
+        transformToLineData ( x, y ) =
+            Just ( Scale.convert xScale x, Scale.convert yScale y )
+
+
+        line : List ( Time.Posix, Float ) -> Path
+        line data =
+            List.map transformToLineData data
+                |> Shape.line Shape.linearCurve
+                
+    in 
+
     svg [ viewBox 0 0 w h ]
         [ g [ transform [ Translate (padding - 1) (h - padding) ] ]
             [ xAxis]
