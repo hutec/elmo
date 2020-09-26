@@ -22,15 +22,16 @@ SCOPE = "read_all,activity:read_all,activity:read,profile:read_all"
 
 app = Flask(__name__)
 
+
 def load_users():
-  """Load users from users directory."""
-  users = {}
-  for file in os.listdir("users"):
-      with open(os.path.join("users", file), "r") as user_config_file:
-          user_config = json.load(user_config_file)
-          user_id = user_config["athlete"]["id"]
-          users[user_id] = user_config
-  app.config["USERS"] = users
+    """Load users from users directory."""
+    users = {}
+    for file in os.listdir("users"):
+        with open(os.path.join("users", file), "r") as user_config_file:
+            user_config = json.load(user_config_file)
+            user_id = user_config["athlete"]["id"]
+            users[user_id] = user_config
+    app.config["USERS"] = users
 
 
 @app.route("/users")
@@ -38,7 +39,7 @@ def list_users():
     """List all users."""
     load_users()
     users = list(map(user_to_dict, app.config["USERS"].values()))
-    
+
     # user_names = [u["athlete"]["firstname"] for u in app.config["USERS"].values()]
     response = jsonify(users)
     response.headers.add("Access-Control-Allow-Origin", "*")
@@ -58,13 +59,18 @@ def list_routes(user_id):
     routes = []
     page = 1
     while True:
-      r = api.get_logged_in_athlete_activities(per_page=100, page=page)
-      new_routes = list(map(activity_to_dict, r))
-      if new_routes:
-        routes.extend(new_routes)
-        page += 1
-      else:
-        break
+        activities = api.get_logged_in_athlete_activities(per_page=10, page=page)
+        # Add detailed polyline to activity
+        for activity in activities:
+            detailed_activity = api.get_activity_by_id(activity.id)
+            activity.map.polyline = detailed_activity.map.polyline
+
+        new_routes = list(map(activity_to_dict, activities))
+        if new_routes:
+            routes.extend(new_routes)
+            page += 1
+        else:
+            break
 
     response = jsonify(routes)
     response.headers.add("Access-Control-Allow-Origin", "*")
@@ -103,4 +109,3 @@ def user_token_exchange():
 
 if __name__ == "__main__":
     app.run(debug=True)
-

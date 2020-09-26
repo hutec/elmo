@@ -18,14 +18,12 @@ def activity_to_dict(
         "average_speed": activity.average_speed * 3.6,
         "moving_time": activity.moving_time,
         "elevation": activity.total_elevation_gain,
-        "route": polyline.codec.PolylineCodec().decode(activity.map.summary_polyline),
+        "route": polyline.codec.PolylineCodec().decode(activity.map.polyline),
     }
 
+
 def user_to_dict(user: dict) -> dict:
-    return {
-             "id": str(user["athlete"]["id"]),
-            "name": str(user["athlete"]["firstname"])
-        }
+    return {"id": str(user["athlete"]["id"]), "name": str(user["athlete"]["firstname"])}
 
 
 def check_and_refresh(app, user_id):
